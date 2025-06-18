@@ -21,6 +21,7 @@ to be stored in the sigstore bundle used for the signature but `sigstore-python`
 validation does not allow those.
 """
 
+import json
 import abc
 import pathlib
 import sys
@@ -110,6 +111,8 @@ class Signature(signing.Signature):
     @override
     def read(cls, path: pathlib.Path) -> Self:
         content = path.read_text()
+        parsed_dict = json.loads(content)
+        print(f"\n--- Debug: Parsed Dictionary from {path} ---\n{json.dumps(parsed_dict, indent=2)}\n-------------------------------------------\n")
         return cls(bundle_pb.Bundle().from_json(content))
 
 
