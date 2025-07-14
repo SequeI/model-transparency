@@ -108,6 +108,9 @@ extra-dependencies = [
   "pdoc"
 ]
 
+[tool.hatch.envs.default]
+installer = "uv"
+
 [tool.hatch.envs.docs.scripts]
 serve = "pdoc model_signing --docformat google --edit-url model_signing=https://github.com/sigstore/model-transparency/blob/main/src/model_signing/ {args}"
 build = "serve --output-directory html"
