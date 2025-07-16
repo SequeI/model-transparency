@@ -1,4 +1,4 @@
-# Copyright 2024 The Sigstore Authors
+# Copyright 2025 The Sigstore Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,17 +12,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""For the stable high-level API, see model_signing.api."""
+FROM python:3.13-slim AS base
 
-__version__ = "0.1.1"
+FROM base AS builder
 
-FROM python:3.13-slim
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 
-COPY pyproject.toml ./
-COPY src ./src
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    g++ \
+    swig
 
-RUN python -m pip install model_signing
+WORKDIR /app
 
-ENTRYPOINT ["/usr/local/bin/model_signing"]
+COPY . /app
 
+RUN --mount=type=cache,target=/root/.cache/uv \
+  uv sync --frozen --all-extras
+
+FROM base
+
+COPY --from=builder /app /app
+
+ENV PATH="/app/.venv/bin:$PATH"
+
+ENTRYPOINT ["model_signing"]
 CMD ["--help"]
+
+ARG APP_VERSION="1.0.1"
+
+LABEL org.opencontainers.image.title="Model Transparency Library" \
+      org.opencontainers.image.description="Supply chain security for ML" \
+      org.opencontainers.image.version=$APP_VERSION \
+      org.opencontainers.image.authors="The Sigstore Authors <sigstore-dev@googlegroups.com>" \
+      org.opencontainers.image.licenses="Apache-2.0" \
