@@ -50,7 +50,7 @@ jobs:
         set -euxo pipefail
         if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
           sudo apt-get update
-          sudo apt install softhsm2 gnutls-bin --fix-missing
+          sudo apt install softhsm2 gnutls-bin
           ./scripts/pkcs11-tests/softhsm_setup setup
         fi
         hatch test -c -py ${{ matrix.python-version }} -m integration
