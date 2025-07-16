@@ -34,6 +34,7 @@ dependencies = [
   "in-toto-attestation",
   "sigstore",
   "typing_extensions",
+  "sigstore-protobuf-specs",
 ]
 requires-python = ">=3.9"
 keywords = [
