@@ -34,7 +34,6 @@ dependencies = [
   "in-toto-attestation",
   "sigstore",
   "typing_extensions",
-  "sigstore-protobuf-specs",
 ]
 requires-python = ">=3.9"
 keywords = [
@@ -108,9 +107,6 @@ Use `hatch run docs:serve` to view documentation.
 extra-dependencies = [
   "pdoc"
 ]
-
-[tool.hatch.envs.default]
-installer = "uv"
 
 [tool.hatch.envs.docs.scripts]
 serve = "pdoc model_signing --docformat google --edit-url model_signing=https://github.com/sigstore/model-transparency/blob/main/src/model_signing/ {args}"
