@@ -71,7 +71,7 @@ def mocked_oidc_provider():
 
         # return whatever raw_token was passed in
         mocked_identity_token = mocked_objects["IdentityToken"]
-        mocked_identity_token.side_effect = lambda x: x
+        mocked_identity_token.side_effect = lambda token, client_id: token
 
         mocked_issuer = mocked_objects["Issuer"]
         mocked_issuer.return_value.identity_token.return_value = "fake_token"
