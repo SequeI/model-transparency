@@ -213,6 +213,76 @@ Similarly, for key verification, we can use
        --signature resnet.sig --public-key key.pub
 ```
 
+#### Signing and Verifying OCI Images
+
+The tool supports signing and verifying OCI container images directly from
+registries. Signatures are automatically attached to the registry.
+
+```bash
+# Sign with Sigstore
+[...]$ model_signing sign sigstore quay.io/user/model:latest
+
+# Sign with EC key
+[...]$ model_signing sign key quay.io/user/model:latest --private-key key.pem
+```
+
+Registry authentication uses your existing credentials from `~/.docker/config.json`
+or podman's `auth.json`.
+
+By default, signatures are attached using the OCI 1.1 Referrers API. For older
+registries, use `--attachment-mode tag`:
+
+```bash
+[...]$ model_signing sign sigstore quay.io/user/model:latest --attachment-mode tag
+```
+
+To verify:
+
+```bash
+# Verify Sigstore signature
+[...]$ model_signing verify sigstore quay.io/user/model:latest \
+  --identity user@example.com \
+  --identity-provider https://accounts.google.com
+
+# Verify key-based signature
+[...]$ model_signing verify key quay.io/user/model:latest --public-key key.pub
+```
+
+You can also verify that local files match a signed image:
+
+```bash
+[...]$ model_signing verify sigstore quay.io/user/model:latest \
+  --identity user@example.com \
+  --identity-provider https://accounts.google.com \
+  --local-model ./downloaded-model
+```
+
+Use `--type image` or `--type file` to explicitly specify the target type if
+needed.
+
+##### Python API
+
+```python
+import model_signing
+
+# Sign an image
+model_signing.signing.Config().use_sigstore_signer().sign_image(
+    "quay.io/user/model:latest"
+)
+
+# Verify an image
+model_signing.verifying.Config().use_sigstore_verifier(
+    identity="user@example.com",
+    oidc_issuer="https://accounts.google.com"
+).verify_image("quay.io/user/model:latest")
+
+# Verify image and check local files match
+model_signing.verifying.Config().use_sigstore_verifier(
+    identity="user@example.com",
+    oidc_issuer="https://accounts.google.com"
+).verify_image("quay.io/user/model:latest", local_model_path="./model_dir")
+```
+
 #### Signing with PKCS #11 URIs
 
 Signing with PKCS #11 enabled crypto devices is supported through RFC 7512
