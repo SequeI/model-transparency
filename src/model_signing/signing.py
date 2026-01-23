@@ -43,10 +43,16 @@ The API defined here is stable and backwards compatible.
 """
 
 from collections.abc import Iterable
+import json
 import pathlib
 import sys
 
+import requests
+
 from model_signing import hashing
+from model_signing import manifest
+from model_signing._oci import attachment as oci_attachment
+from model_signing._oci import registry as oci_registry
 from model_signing._signing import sign_certificate as certificate
 from model_signing._signing import sign_ec_key as ec_key
 from model_signing._signing import sign_sigstore as sigstore
@@ -107,6 +113,115 @@ class Config:
         payload = signing.Payload(manifest)
         signature = self._signer.sign(payload)
         signature.write(pathlib.Path(signature_path))
+
+    def sign_from_manifest(
+        self,
+        model_manifest: manifest.Manifest,
+        signature_path: hashing.PathLike,
+    ):
+        """Sign a pre-constructed manifest without needing model files.
+
+        This method is useful for OCI workflows where you have the manifest
+        data (e.g., from `skopeo inspect --raw`) but don't have the actual
+        model files on disk.
+
+        Args:
+            model_manifest: A Manifest object created from OCI image data.
+              Can be created using `hashing.create_manifest_from_oci_layers()`.
+            signature_path: The path where the signature will be written.
+        """
+        if not self._signer:
+            self.use_sigstore_signer()
+        payload = signing.Payload(model_manifest)
+        signature = self._signer.sign(payload)
+        signature.write(pathlib.Path(signature_path))
+
+    def sign_image(
+        self, image_ref: str, attachment_mode: str = "referrers"
+    ) -> str:
+        """Sign an OCI image and attach signature to the registry.
+
+        This method pulls the image manifest from the registry, creates a
+        signing manifest from its layers, signs it, and attaches the signature
+        back to the registry.
+
+        Args:
+            image_ref: OCI image reference (e.g., "quay.io/user/model:latest"
+              or "ghcr.io/org/model@sha256:...").
+            attachment_mode: How to attach the signature to the registry.
+              - "referrers" (default): Uses OCI 1.1 Referrers API. Falls back
+                to tag-based if the registry doesn't support OCI 1.1 artifacts.
+              - "tag": Uses tag-based attachment (sha256-DIGEST.sig)
+
+        Returns:
+            The digest of the attached signature artifact.
+
+        Raises:
+            ValueError: If the image reference is invalid or attachment fails.
+        """
+        if not self._signer:
+            raise ValueError(
+                "No signer configured. Call use_sigstore_signer(), "
+                "use_elliptic_key_signer(), or another signer method first."
+            )
+
+        parsed_ref = oci_registry.ImageReference.parse(image_ref)
+
+        client = oci_registry.OrasClient()
+
+        oci_manifest, image_digest = client.get_manifest(parsed_ref)
+        manifest_size = len(json.dumps(oci_manifest, separators=(",", ":")))
+
+        model_manifest = hashing.create_manifest_from_oci_layers(
+            oci_manifest, model_name=str(parsed_ref)
+        )
+
+        payload = signing.Payload(model_manifest)
+        signature = self._signer.sign(payload)
+
+        signature_bytes = signature.bundle.to_json().encode("utf-8")
+
+        match attachment_mode.lower():
+            case "referrers":
+                mode = oci_attachment.AttachmentMode.REFERRERS
+            case "tag":
+                mode = oci_attachment.AttachmentMode.TAG
+            case _:
+                raise ValueError(
+                    f"Invalid attachment mode '{attachment_mode}'. "
+                    "Must be 'referrers' or 'tag'."
+                )
+
+        strategy = oci_attachment.get_attachment_strategy(mode)
+
+        # Try to attach signature to registry
+        # If using referrers and the registry doesn't support it (400 error),
+        # automatically fall back to tag-based attachment
+        try:
+            sig_digest = strategy.attach(
+                client, parsed_ref, signature_bytes, image_digest, manifest_size
+            )
+        except requests.HTTPError as e:
+            if (
+                mode == oci_attachment.AttachmentMode.REFERRERS
+                and e.response is not None
+                and e.response.status_code == 400
+            ):
+                # Registry doesn't support OCI 1.1 artifacts, fall back to tags
+                fallback = oci_attachment.get_attachment_strategy(
+                    oci_attachment.AttachmentMode.TAG
+                )
+                sig_digest = fallback.attach(
+                    client,
+                    parsed_ref,
+                    signature_bytes,
+                    image_digest,
+                    manifest_size,
+                )
+            else:
+                raise
+
+        return sig_digest
 
     def set_hashing_config(self, hashing_config: hashing.Config) -> Self:
         """Sets the new configuration for hashing models.

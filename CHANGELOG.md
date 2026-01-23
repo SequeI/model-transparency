@@ -10,7 +10,11 @@ All versions prior to 1.0.0 are untracked.
 ## [Unreleased]
 
 ### Added
--Added the `digest` subcommand to compute and print a model's digest. This enables other tools to easily pair the attestations with a model directory.
+- Added the `digest` subcommand to compute and print a model's digest.
+- Added OCI image signing and verification. Sign and verify container images directly in registries using `model_signing sign sigstore quay.io/user/model:latest`. Supports both OCI 1.1 Referrers API and tag-based attachment.
+- Added smart target detection for CLI commands. The tool auto-detects if the target is an OCI image reference or a local path. Use `--type` to override.
+- Added `--local-model` option to verify that local files match a signed image's layer digests.
+- Added `sign_image()` and `verify_image()` methods to the Python API.
 
 ### Changed
 - Standardized CLI flags to use hyphens (e.g., `--trust-config` instead of `--trust_config`). Underscore variants are still accepted for backwards compatibility via token normalization.
