@@ -393,3 +393,30 @@ class TestSerializer:
         _ = serializer.serialize(
             symlink_model_folder, ignore_paths=[symlink_model_folder]
         )
+
+    def test_model_path_with_dotdot_name(self, tmp_path):
+        model_dir = tmp_path / "model"
+        model_dir.mkdir()
+        test_file = model_dir / "file.txt"
+        test_file.write_text("content")
+        serializer = file_shard.Serializer(self._hasher_factory)
+        # Use pathlib.Path("..") relative context to trigger name == ".."
+        import os
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(model_dir)
+            dotdot_path = pathlib.Path("..")
+            manifest_result = serializer.serialize(dotdot_path)
+            # Should resolve to tmp_path's basename
+            assert manifest_result.model_name == tmp_path.name
+        finally:
+            os.chdir(original_cwd)
+
+    def test_serialize_with_files_to_hash(self, sample_model_folder):
+        serializer = file_shard.Serializer(self._hasher_factory)
+        files = list(sample_model_folder.glob("**/*"))
+        files = [f for f in files if f.is_file()]
+        manifest_result = serializer.serialize(
+            sample_model_folder, files_to_hash=files
+        )
+        assert len(manifest_result._item_to_digest) > 0
