@@ -273,7 +273,7 @@ With a KMS URI, we can use the following for signing:
 
 ```bash
 [...]$ model_signing sign kms-key --signature model.sig \
-       --kms_uri "kms://aws/arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012" \
+       --kms-uri "kms://aws/arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012" \
        /path/to/your/model
 ```
 

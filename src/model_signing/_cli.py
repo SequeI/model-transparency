@@ -549,7 +549,7 @@ def _sign_pkcs11_key(
 
 # Decorator for the commonly used option to set a KMS URI
 _kms_uri_option = click.option(
-    "--kms_uri",
+    "--kms-uri",
     type=str,
     metavar="KMS_URI",
     required=True,
@@ -581,7 +581,7 @@ def _sign_kms_key(
     (as per `--signature` option). Files in IGNORE_PATHS are not part of the
     signature.
 
-    Pass the AWS KMS URI using `--kms_uri`. The URI format is:
+    Pass the AWS KMS URI using `--kms-uri`. The URI format is:
     kms://aws/<key-id-or-arn>?region=<region>
 
     For additional KMS providers, please open an issue at:
