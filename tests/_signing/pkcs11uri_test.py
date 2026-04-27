@@ -148,6 +148,44 @@ class TestPkcs11URI:
             uri.validate()
             uri.remove_path_attribute(entry[0])
 
+    def test_get_path_attribute_bytes(self) -> None:
+        uri = Pkcs11URI()
+        uri.add_path_attribute("id", "%66oo")
+        result = uri.get_path_attribute_bytes("id")
+        assert result == b"foo"
+        assert uri.get_path_attribute_bytes("nonexistent") is None
+
+    def test_get_query_attribute_bytes(self) -> None:
+        uri = Pkcs11URI()
+        uri.add_query_attribute("pin-value", "secret")
+        result = uri.get_query_attribute_bytes("pin-value")
+        assert result == b"secret"
+        assert uri.get_query_attribute_bytes("nonexistent") is None
+
+    def test_duplicate_path_attribute_raises(self) -> None:
+        uri = Pkcs11URI()
+        uri.add_path_attribute("token", "mytoken")
+        with pytest.raises(ValueError, match="duplicate path attribute"):
+            uri.add_path_attribute("token", "another")
+
+    def test_duplicate_path_attribute_unencoded_raises(self) -> None:
+        uri = Pkcs11URI()
+        uri.add_path_attribute("token", "mytoken")
+        with pytest.raises(ValueError, match="duplicate path attribute"):
+            uri.add_path_attribute_unencoded("token", b"another")
+
+    def test_duplicate_query_attribute_raises(self) -> None:
+        uri = Pkcs11URI()
+        uri.add_query_attribute("module-name", "softhsm")
+        with pytest.raises(ValueError, match="duplicate query attribute"):
+            uri.add_query_attribute("module-name", "another")
+
+    def test_duplicate_query_attribute_unencoded_raises(self) -> None:
+        uri = Pkcs11URI()
+        uri.add_query_attribute("module-name", "softhsm")
+        with pytest.raises(ValueError, match="duplicate query attribute"):
+            uri.add_query_attribute_unencoded("module-name", b"another")
+
     def test_uris(self) -> None:
         uri = Pkcs11URI()
 
